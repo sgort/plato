@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-ink-900 text-slate-100 font-sans;
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { @apply bg-ink-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-ink-600 rounded-full; }
+}
+
+@layer components {
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium tracking-wide;
+  }
+  .btn-ghost {
+    @apply px-3 py-1.5 rounded text-sm text-slate-400 hover:text-slate-100 hover:bg-ink-800
+           transition-colors duration-150 cursor-pointer;
+  }
+  .input-base {
+    @apply w-full bg-ink-800 border border-ink-600 rounded-lg px-4 py-2.5
+           text-slate-100 placeholder-slate-500 font-sans text-sm
+           focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30
+           transition-colors duration-150;
+  }
+}
+
+/* ── Light theme overrides ────────────────────────────────────────────────────
+   Applied when <html class="light"> is set.
+   Uses !important to override Tailwind's generated utilities.
+   Zero component changes required.
+   ────────────────────────────────────────────────────────────────────────── */
+
+html.light body                  { background-color: #f1f5f9 !important; color: #0f172a !important; }
+html.light ::-webkit-scrollbar-track  { background-color: #f1f5f9 !important; }
+html.light ::-webkit-scrollbar-thumb  { background-color: #cbd5e1 !important; }
+
+/* Backgrounds */
+html.light .bg-ink-950           { background-color: #e2e8f0 !important; }
+html.light .bg-ink-900,
+html.light .bg-ink-900\/95       { background-color: #f1f5f9 !important; }
+html.light .bg-ink-800           { background-color: #ffffff !important; }
+html.light .bg-ink-800\/40       { background-color: rgba(255,255,255,0.7) !important; }
+html.light .bg-ink-800\/60       { background-color: rgba(255,255,255,0.85) !important; }
+html.light .bg-ink-700           { background-color: #f8fafc !important; }
+
+/* Borders */
+html.light .border-ink-800       { border-color: #cbd5e1 !important; }
+html.light .border-ink-700       { border-color: #e2e8f0 !important; }
+html.light .border-ink-600       { border-color: #cbd5e1 !important; }
+
+/* Text */
+html.light .text-slate-100       { color: #0f172a !important; }
+html.light .text-slate-300       { color: #1e293b !important; }
+html.light .text-slate-400       { color: #334155 !important; }
+html.light .text-slate-500       { color: #64748b !important; }
+html.light .text-slate-600       { color: #94a3b8 !important; }
+html.light .text-slate-700       { color: #94a3b8 !important; }
+
+/* Hover states */
+html.light .hover\:text-slate-100:hover  { color: #0f172a !important; }
+html.light .hover\:bg-ink-800:hover      { background-color: #f8fafc !important; }
+html.light .hover\:bg-ink-600:hover      { background-color: #e2e8f0 !important; }
+html.light .hover\:border-ink-600:hover  { border-color: #94a3b8 !important; }
+
+/* Input */
+html.light .input-base {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html.light .input-base::placeholder     { color: #94a3b8 !important; }
+
+/* Source toggle active state */
+html.light .border-amber-500\/60  { border-color: rgba(245,158,11,0.6) !important; }
+html.light .bg-amber-500\/10      { background-color: rgba(245,158,11,0.08) !important; }
+
+/* Feed card hover */
+html.light .hover\:bg-ink-800:hover { background-color: #f8fafc !important; }
+html.light .hover\:border-ink-600:hover { border-color: #94a3b8 !important; }
+
+/* Backdrop blur header */
+html.light .backdrop-blur-sm { backdrop-filter: blur(8px); }
+
+/* CBS chart area */
+html.light polygon[fill="url(#cbs-area)"] { opacity: 0.6; }

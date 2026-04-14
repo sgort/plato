@@ -1,0 +1,20 @@
+# Replace yourdomain.nl with your actual domain.
+# For local dev, use :80 and comment out the HTTPS block.
+yourdomain.nl {
+  handle /api/* {
+    reverse_proxy api:8000
+  }
+  handle {
+    reverse_proxy frontend:80
+  }
+}
+
+# Local dev: uncomment this and comment out the block above
+# :80 {
+#   handle /api/* {
+#     reverse_proxy api:8000
+#   }
+#   handle {
+#     reverse_proxy frontend:80
+#   }
+# }
