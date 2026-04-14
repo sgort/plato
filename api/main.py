@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request
-from fastapi.responses import Response
 
 from db.database import init_db
 from routers import cbs, legislation, ob, searches, tk
@@ -29,12 +28,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 @app.middleware("http")
 async def no_cache_api(request: Request, call_next):
     response = await call_next(request)
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     return response
+
 
 app.add_middleware(
     CORSMiddleware,

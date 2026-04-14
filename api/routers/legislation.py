@@ -12,7 +12,9 @@ ValidFormat = Literal["cprmv-json", "turtle", "json-ld", "n3", "xml"]
 
 @router.get("/rule/{rule_id_path:path}")
 async def get_rule(
-    rule_id_path: Annotated[str, Path(description="Rule path e.g. BWBR0015703 or BWBR0015703, Artikel 20")],
+    rule_id_path: Annotated[
+        str, Path(description="Rule path e.g. BWBR0015703 or BWBR0015703, Artikel 20")
+    ],
     format: Annotated[ValidFormat, Query()] = "cprmv-json",
 ):
     """
@@ -26,9 +28,13 @@ async def get_rule(
     try:
         return await fetch_rule(rule_id_path, fmt=format)
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.response.status_code, detail=str(exc)
+        ) from exc
     except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"CPRMV API unavailable: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"CPRMV API unavailable: {exc}"
+        ) from exc
 
 
 @router.get("/methods")

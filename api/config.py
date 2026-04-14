@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./dashboard.db"
     redis_url: str = "redis://localhost:6379"
     tk_api_base: str = "https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0"
-    cache_ttl_tk: int = 900     # 15 min
+    cache_ttl_tk: int = 900  # 15 min
     cache_ttl_static: int = 3600
 
     class Config:

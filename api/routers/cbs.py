@@ -17,8 +17,12 @@ async def get_datasets():
 @router.get("/dataset/{dataset_code}/observations")
 async def get_observations(
     dataset_code: Annotated[str, Path(description="CBS dataset code e.g. 83474NED")],
-    measure: Annotated[str | None, Query(description="CBS Measure key to filter")] = None,
-    periods: Annotated[int, Query(ge=1, le=100, description="Number of most-recent periods")] = 12,
+    measure: Annotated[
+        str | None, Query(description="CBS Measure key to filter")
+    ] = None,
+    periods: Annotated[
+        int, Query(ge=1, le=100, description="Number of most-recent periods")
+    ] = 12,
 ):
     """
     Fetch time-series observations from a CBS dataset.
@@ -33,6 +37,10 @@ async def get_observations(
     try:
         return await fetch_observations(dataset_code, measure=measure, periods=periods)
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.response.status_code, detail=str(exc)
+        ) from exc
     except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"CBS API unavailable: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"CBS API unavailable: {exc}"
+        ) from exc

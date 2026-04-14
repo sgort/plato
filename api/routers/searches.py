@@ -122,5 +122,5 @@ async def delete_search(
         )
     )
     await db.commit()
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(status_code=404, detail="Search not found")

@@ -73,8 +73,7 @@ def _build_cql(q: str | None, pub_types: list[str]) -> str:
 
 def _parse_record(record_el: ET.Element) -> dict | None:
     """Parse one SRU recordData element into a normalised item dict."""
-    # recordData > gzd > originalData > owms:owmskern or dc fields
-    # The structure varies by publication type; we fall back gracefully.
+
     def find_text(el: ET.Element, *paths: str) -> str | None:
         for path in paths:
             node = el.find(path, _NS)
@@ -91,7 +90,6 @@ def _parse_record(record_el: ET.Element) -> dict | None:
     if not title and not identifier:
         return None
 
-    # Build a URL from the identifier if it looks like a web address
     url: str | None = None
     if identifier and identifier.startswith("http"):
         url = identifier
@@ -127,11 +125,11 @@ async def fetch_ob_feed(
         "x-connection": "officielepublicaties",
         "operation": "searchRetrieve",
         "version": "2.0",
-        "maximumRecords": top,
-        "startRecord": skip + 1,  # SRU is 1-indexed
+        "maximumRecords": str(top),
+        "startRecord": str(skip + 1),
         "query": _build_cql(q, pub_types),
         "recordSchema": "http://www.loc.gov/zing/srw/",
-        "sortKeys": "dcterms.modified,,0",  # most recent first
+        "sortKeys": "dcterms.modified,,0",
     }
 
     try:
@@ -149,11 +147,9 @@ async def fetch_ob_feed(
         logger.error("OB SRU XML parse error: %s", exc)
         raise ValueError(f"Invalid XML from OB SRU: {exc}") from exc
 
-    # Total hits
     total_node = root.find("srw:numberOfRecords", _NS)
     total = int(total_node.text) if total_node is not None and total_node.text else None
 
-    # Records
     records_node = root.find("srw:records", _NS)
     items: list[dict] = []
     if records_node is not None:

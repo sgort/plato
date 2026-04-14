@@ -100,4 +100,3 @@ export function createSavedSearch(label: string, query: SearchState): Promise<Sa
 export function deleteSavedSearch(id: string): Promise<void> {
   return apiFetch<void>(`/searches/${id}`, { method: "DELETE" });
 }
-

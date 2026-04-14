@@ -9,7 +9,9 @@ router = APIRouter(prefix="/api/tk", tags=["tk"])
 
 @router.get("/feed")
 async def get_feed(
-    q: Annotated[str | None, Query(description="Full-text search on document title")] = None,
+    q: Annotated[
+        str | None, Query(description="Full-text search on document title")
+    ] = None,
     types: Annotated[
         list[str] | None,
         Query(description="Filter by document type (repeatable)"),
@@ -36,7 +38,9 @@ async def get_feed(
     try:
         return await fetch_tk_feed(q=q, types=types, skip=skip, top=top)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"TK API unavailable: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"TK API unavailable: {exc}"
+        ) from exc
 
 
 @router.get("/types")

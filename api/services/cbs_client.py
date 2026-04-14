@@ -76,22 +76,34 @@ async def fetch_observations(
         logger.info("CBS fetch (attempt %d): %s", attempt + 1, url)
 
         try:
-            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True) as client:
+            async with httpx.AsyncClient(
+                timeout=_HTTP_TIMEOUT, follow_redirects=True
+            ) as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 data = response.json()
             break
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400 and attempt == 0:
-                logger.warning("CBS %s: $orderby=Perioden failed, retrying without", dataset_code)
+                logger.warning(
+                    "CBS %s: $orderby=Perioden failed, retrying without", dataset_code
+                )
                 continue
             logger.error("CBS API %s — %s", exc.response.status_code, url)
-            result = {"dataset": {"code": dataset_code, **dataset_meta}, "observations": [], "error": str(exc)}
+            result: dict[str, Any] = {
+                "dataset": {"code": dataset_code, **dataset_meta},
+                "observations": [],
+                "error": str(exc),
+            }
             await cache_set(cache_key, result, 60)
             return result
         except httpx.RequestError as exc:
             logger.error("CBS network error: %s", exc)
-            return {"dataset": {"code": dataset_code, **dataset_meta}, "observations": [], "error": str(exc)}
+            return {
+                "dataset": {"code": dataset_code, **dataset_meta},
+                "observations": [],
+                "error": str(exc),
+            }
 
     raw = data.get("value", [])
     if not raw:
@@ -114,7 +126,10 @@ async def fetch_observations(
         for p in sorted_periods
     ]
 
-    result = {"dataset": {"code": dataset_code, **dataset_meta}, "observations": observations}
+    result = {
+        "dataset": {"code": dataset_code, **dataset_meta},
+        "observations": observations,
+    }
     await cache_set(cache_key, result, settings.cache_ttl_static)
     return result
 

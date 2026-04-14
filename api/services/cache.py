@@ -47,7 +47,7 @@ async def cache_close() -> None:
     global _pool
     if _pool:
         try:
-            await _pool.aclose()
+            await _pool.close()
         except Exception:
             pass
         _pool = None

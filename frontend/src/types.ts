@@ -71,4 +71,3 @@ export interface LegislationResult {
   ruleIdPath: string;
   data: LegislationRule;
 }
-

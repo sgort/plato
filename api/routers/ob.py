@@ -30,7 +30,9 @@ async def get_ob_feed(
     try:
         return await fetch_ob_feed(q=q, pub_types=types, skip=skip, top=top)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"OB SRU unavailable: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"OB SRU unavailable: {exc}"
+        ) from exc
 
 
 @router.get("/types")

@@ -13,6 +13,7 @@ class GUID(TypeDecorator):
     Platform-independent UUID type.
     Stores as TEXT on SQLite, native UUID on PostgreSQL.
     """
+
     impl = types.String(36)
     cache_ok = True
 

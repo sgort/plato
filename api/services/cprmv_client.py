@@ -26,7 +26,9 @@ _CPRMV_BASE = "https://cprmv.open-regels.nl"
 _HTTP_TIMEOUT = 20.0
 
 
-async def fetch_rule(rule_id_path: str, fmt: str = "cprmv-json") -> dict[str, Any] | str:
+async def fetch_rule(
+    rule_id_path: str, fmt: str = "cprmv-json"
+) -> dict[str, Any] | str:
     """
     Fetch a rule from the CPRMV API.
 
@@ -79,7 +81,9 @@ async def fetch_methods() -> dict[str, Any]:
 
     try:
         async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-            response = await client.get(f"{_CPRMV_BASE}/methods", params={"format": "cprmv-json"})
+            response = await client.get(
+                f"{_CPRMV_BASE}/methods", params={"format": "cprmv-json"}
+            )
             response.raise_for_status()
             result = response.json()
     except Exception as exc:

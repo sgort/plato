@@ -82,7 +82,6 @@ def _document_url(item: dict) -> str | None:
     return f"https://www.tweedekamer.nl/kamerstukken/detail?id={doc_id}"
 
 
-
 def _clean_number(v: Any) -> str | None:
     """Hide internal negative volgnummers (-1) that have no display value."""
     if v is None:
@@ -111,20 +110,20 @@ def _normalise(raw_items: list[dict]) -> list[dict]:
             or "(geen onderwerp)"
         )
         date = (
-            item.get("GewijzigdOp")
-            or item.get("DatumRegistratie")
-            or item.get("Datum")
+            item.get("GewijzigdOp") or item.get("DatumRegistratie") or item.get("Datum")
         )
-        out.append({
-            "id": item.get("Id"),
-            "title": title,
-            "type": item.get("Soort"),
-            "number": _clean_number(item.get("Nummer") or item.get("Volgnummer")),
-            "vergaderjaar": item.get("Vergaderjaar"),
-            "date": date,
-            "url": _document_url(item),
-            "source": "tk",
-        })
+        out.append(
+            {
+                "id": item.get("Id"),
+                "title": title,
+                "type": item.get("Soort"),
+                "number": _clean_number(item.get("Nummer") or item.get("Volgnummer")),
+                "vergaderjaar": item.get("Vergaderjaar"),
+                "date": date,
+                "url": _document_url(item),
+                "source": "tk",
+            }
+        )
     return out
 
 
