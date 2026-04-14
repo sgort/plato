@@ -66,7 +66,7 @@ def _build_cql(q: str | None, pub_types: list[str]) -> str:
     ]
     if q and q.strip():
         safe = q.strip().replace('"', '\\"')
-        parts.append(f'dc.title any "{safe}" OR dc.description any "{safe}"')
+        parts.append(f'cql.textAndIndexes any "{safe}"')
     if pub_types:
         type_clauses = " OR ".join(f'w.publicatienaam == "{t}"' for t in pub_types)
         parts.append(f"({type_clauses})")
