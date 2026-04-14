@@ -25,6 +25,10 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^frontend/node_modules/
       - id: end-of-file-fixer
+        exclude: ^frontend/node_modules/
       - id: check-yaml
+        exclude: ^frontend/node_modules/
       - id: check-merge-conflict
+        exclude: ^frontend/node_modules/
