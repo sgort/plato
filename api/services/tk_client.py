@@ -2,11 +2,15 @@
 Tweede Kamer OData v4 client.
 
 API base: https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0
-Documentation: https://opendata.tweedekamer.nl/documentatie/odata-api
 
-We intentionally omit $select so the API returns all fields.
-This avoids 400 errors from unknown field names and lets us log the actual
-schema on the first response — check the uvicorn output to see real field names.
+Primary collection: Document
+  Id               — UUID (internal, NOT used in website URLs)
+  DocumentNummer   — string e.g. "2026D16594" (used in website URLs)
+  Soort            — string (Motie | Amendement | Brief | Kamervraag | …)
+  Onderwerp        — string (subject / title)
+  GewijzigdOp      — datetime (sort field)
+  Vergaderjaar     — string (e.g. "2024-2025")
+  Volgnummer       — int (-1 = no value)
 """
 
 import hashlib
@@ -34,32 +38,23 @@ DOCUMENT_TYPES = [
 ]
 
 _HTTP_TIMEOUT = 15.0
-_schema_logged = False  # log field names once on first successful response
+_schema_logged = False
 
 
 def _build_filter(q: str | None, types: list[str]) -> str:
     parts: list[str] = ["Verwijderd eq false"]
-
     if q and q.strip():
         safe = q.strip().replace("'", "''")
         parts.append(f"contains(Onderwerp,'{safe}')")
-
     if types:
         type_clauses = " or ".join(f"Soort eq '{t}'" for t in types)
         parts.append(f"({type_clauses})")
-
     return " and ".join(parts)
 
 
 def _build_url(q: str | None, types: list[str], skip: int, top: int) -> str:
-    """
-    Build the OData URL with literal $ signs.
-    httpx percent-encodes $ to %24 when using params=dict, breaking OData.
-    We build the query string manually to keep $ literal.
-    """
     filter_str = _build_filter(q, types)
     encoded_filter = _up.quote(filter_str, safe="() =',")
-
     qs = (
         f"$orderby=GewijzigdOp desc"
         f"&$top={top}"
@@ -76,14 +71,21 @@ def _cache_key(q: str | None, types: list[str], skip: int, top: int) -> str:
 
 
 def _document_url(item: dict) -> str | None:
-    doc_id = item.get("Id")
-    if not doc_id:
-        return None
-    return f"https://www.tweedekamer.nl/kamerstukken/detail?id={doc_id}"
+    """
+    Use DocumentNummer (e.g. '2026D16594') for the website URL.
+    The internal UUID Id does NOT work as a TK website URL parameter.
+    Confirmed URL pattern: tweedekamer.nl/kamerstukken/detail?id=2026D16594&did=2026D16594
+    """
+    doc_num = item.get("DocumentNummer")
+    if doc_num:
+        return (
+            f"https://www.tweedekamer.nl/kamerstukken/detail?id={doc_num}&did={doc_num}"
+        )
+    return None
 
 
 def _clean_number(v: Any) -> str | None:
-    """Hide internal negative volgnummers (-1) that have no display value."""
+    """Hide internal negative volgnummers (-1)."""
     if v is None:
         return None
     try:
@@ -102,7 +104,6 @@ def _normalise(raw_items: list[dict]) -> list[dict]:
 
     out = []
     for item in raw_items:
-        # Be defensive — use .get() for every field so unknown names don't crash
         title = (
             item.get("Onderwerp")
             or item.get("Titel")
@@ -117,7 +118,7 @@ def _normalise(raw_items: list[dict]) -> list[dict]:
                 "id": item.get("Id"),
                 "title": title,
                 "type": item.get("Soort"),
-                "number": _clean_number(item.get("Nummer") or item.get("Volgnummer")),
+                "number": _clean_number(item.get("Volgnummer")),
                 "vergaderjaar": item.get("Vergaderjaar"),
                 "date": date,
                 "url": _document_url(item),
@@ -158,6 +159,6 @@ async def fetch_tk_feed(
     items = _normalise(data.get("value", []))
     total = data.get("@odata.count")
 
-    result = {"items": items, "total": total, "skip": skip, "top": top}
+    result: dict[str, Any] = {"items": items, "total": total, "skip": skip, "top": top}
     await cache_set(cache_key, result, settings.cache_ttl_tk)
     return result

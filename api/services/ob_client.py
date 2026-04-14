@@ -1,14 +1,11 @@
 """
 Officiële Bekendmakingen SRU client.
 
-SRU endpoint: https://zoekservice.overheid.nl/sru/Search
-Connection:   officielepublicaties
+Endpoint: https://repository.overheid.nl/sru
 
-Covers: Staatsblad, Staatscourant, Kamerstukken, ministerial letters, etc.
-Docs:   https://zoekservice.overheid.nl/
-
-SRU (Search/Retrieve via URL) returns Dublin Core XML.
-We parse it to a flat item list compatible with the feed schema.
+Working CQL index confirmed: c.product-area=officielepublicaties
+The server does not reliably support sortKeys or dcterms.issued filtering,
+so we sort results client-side by dc:date after fetching.
 """
 
 import hashlib
@@ -23,20 +20,18 @@ from services.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
-_SRU_BASE = "https://zoekservice.overheid.nl/sru/Search"
+_SRU_BASE = "https://repository.overheid.nl/sru"
 _HTTP_TIMEOUT = 15.0
 
-# XML namespaces in SRU responses
 _NS = {
-    "srw": "http://www.loc.gov/zing/srw/",
+    "sru": "http://docs.oasis-open.org/ns/search-ws/sruResponse",
+    "gzd": "http://standaarden.overheid.nl/sru",
     "dc": "http://purl.org/dc/elements/1.1/",
     "dcterms": "http://purl.org/dc/terms/",
-    "overheidwetgeving": "http://standaarden.overheid.nl/wetgeving/",
     "overheidop": "http://standaarden.overheid.nl/op/terms/",
-    "ovrext": "http://standaarden.overheid.nl/sru",
+    "overheidwetgeving": "http://standaarden.overheid.nl/wetgeving/",
 }
 
-# Publication type labels used for filter chips in the frontend
 PUBLICATION_TYPES = [
     "Staatsblad",
     "Staatscourant",
@@ -47,45 +42,40 @@ PUBLICATION_TYPES = [
 
 
 def _cache_key(q: str | None, pub_types: list[str], skip: int, top: int) -> str:
-    raw = f"ob|{q}|{sorted(pub_types)}|{skip}|{top}"
+    raw = f"ob5|{q}|{sorted(pub_types)}|{skip}|{top}"
     return "ob:" + hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def _build_cql(q: str | None, pub_types: list[str]) -> str:
-    """
-    Build a CQL (Contextual Query Language) string for the SRU $filter.
-    SRU uses CQL rather than OData syntax.
-    """
-    parts: list[str] = []
-
+    parts: list[str] = ["c.product-area=officielepublicaties"]
     if q and q.strip():
         safe = q.strip().replace('"', '\\"')
-        parts.append(f'dcterms.title any "{safe}" or dc.description any "{safe}"')
-
+        parts.append(f'cql.textAndIndexes="{safe}"')
     if pub_types:
-        type_clauses = " or ".join(
-            f'overheidop.publicatietype = "{t}"' for t in pub_types
+        type_clauses = " OR ".join(
+            f'overheidop.publicatietype="{t}"' for t in pub_types
         )
         parts.append(f"({type_clauses})")
+    return " AND ".join(parts)
 
-    return " and ".join(parts) if parts else "dc.title any *"
+
+def _find_text(el: ET.Element, *paths: str) -> str | None:
+    for path in paths:
+        node = el.find(path, _NS)
+        if node is not None and node.text:
+            return node.text.strip()
+    return None
 
 
 def _parse_record(record_el: ET.Element) -> dict | None:
-    """Parse one SRU recordData element into a normalised item dict."""
+    original = record_el.find(".//gzd:originalData", _NS)
+    search_el = original if original is not None else record_el
 
-    def find_text(el: ET.Element, *paths: str) -> str | None:
-        for path in paths:
-            node = el.find(path, _NS)
-            if node is not None and node.text:
-                return node.text.strip()
-        return None
-
-    title = find_text(record_el, ".//dc:title", ".//dcterms:title")
-    identifier = find_text(record_el, ".//dc:identifier", ".//dcterms:identifier")
-    date = find_text(record_el, ".//dc:date", ".//dcterms:date", ".//dcterms:modified")
-    pub_type = find_text(record_el, ".//overheidop:publicatietype")
-    description = find_text(record_el, ".//dc:description", ".//dcterms:abstract")
+    title = _find_text(search_el, ".//dc:title", ".//dcterms:title")
+    identifier = _find_text(search_el, ".//dc:identifier", ".//dcterms:identifier")
+    date = _find_text(search_el, ".//dc:date", ".//dcterms:date", ".//dcterms:issued")
+    pub_type = _find_text(search_el, ".//overheidop:publicatietype")
+    description = _find_text(search_el, ".//dc:description", ".//dcterms:abstract")
 
     if not title and not identifier:
         return None
@@ -94,7 +84,7 @@ def _parse_record(record_el: ET.Element) -> dict | None:
     if identifier and identifier.startswith("http"):
         url = identifier
     elif identifier:
-        url = f"https://officielebekendmakingen.nl/{identifier}"
+        url = f"https://zoek.officielebekendmakingen.nl/{identifier}.html"
 
     return {
         "id": identifier,
@@ -121,15 +111,16 @@ async def fetch_ob_feed(
     if cached is not None:
         return cached
 
+    # Fetch more than requested so client-side sort gives a useful top-N.
+    # For paginated requests beyond page 1 we fetch exactly what was asked.
+    fetch_top = top * 3 if skip == 0 else top
+
     params = {
-        "x-connection": "officielepublicaties",
         "operation": "searchRetrieve",
         "version": "2.0",
-        "maximumRecords": str(top),
+        "maximumRecords": str(fetch_top),
         "startRecord": str(skip + 1),
         "query": _build_cql(q, pub_types),
-        "recordSchema": "http://www.loc.gov/zing/srw/",
-        "sortKeys": "dcterms.modified,,0",
     }
 
     try:
@@ -147,20 +138,28 @@ async def fetch_ob_feed(
         logger.error("OB SRU XML parse error: %s", exc)
         raise ValueError(f"Invalid XML from OB SRU: {exc}") from exc
 
-    total_node = root.find("srw:numberOfRecords", _NS)
+    total_node = root.find("sru:numberOfRecords", _NS)
     total = int(total_node.text) if total_node is not None and total_node.text else None
 
-    records_node = root.find("srw:records", _NS)
+    records_node = root.find("sru:records", _NS)
     items: list[dict] = []
     if records_node is not None:
-        for record_el in records_node.findall("srw:record", _NS):
-            data_el = record_el.find("srw:recordData", _NS)
+        for record_el in records_node.findall("sru:record", _NS):
+            data_el = record_el.find("sru:recordData", _NS)
             if data_el is None:
                 continue
             parsed = _parse_record(data_el)
             if parsed:
                 items.append(parsed)
 
-    result = {"items": items, "total": total, "skip": skip, "top": top}
+    # Sort by date descending client-side (newest first).
+    # Records with no date sort to the end.
+    items.sort(key=lambda x: x.get("date") or "", reverse=True)
+
+    # Trim to requested page size after sorting
+    items = items[:top]
+
+    logger.info("OB SRU total: %s, parsed: %d", total, len(items))
+    result: dict[str, Any] = {"items": items, "total": total, "skip": skip, "top": top}
     await cache_set(cache_key, result, settings.cache_ttl_tk)
     return result

@@ -3,6 +3,11 @@ CBS (Statistics Netherlands) OData v4 client.
 
 Base URL (updated 2024): https://datasets.cbs.nl/odata/v1/CBS
 Old URL (opendata.cbs.nl/OData4) is decommissioned.
+
+Datasets with multiple dimensions (e.g. TypeWoning, Goederengroep) need a
+default_measure to pin a single series for the sparkline chart. Without it,
+$orderby=Perioden desc returns rows interleaved across all dimension values,
+making period deduplication skip most recent periods.
 """
 
 import logging
@@ -18,21 +23,29 @@ logger = logging.getLogger(__name__)
 _CBS_BASE = "https://datasets.cbs.nl/odata/v1/CBS"
 _HTTP_TIMEOUT = 20.0
 
+# default_measure pins a single Measure value for datasets that have extra
+# dimensions, ensuring the chart shows one clean time series.
+# Find valid measure codes at: {_CBS_BASE}/{code}/MeasureCodes
 DATASETS: dict[str, dict[str, str]] = {
     "83474NED": {
         "label": "Bevolking — kerncijfers",
         "description": "Bevolkingsontwikkeling, geboorte, overlijden, migratie",
         "unit": "personen",
+        # Single dimension (Perioden only) — no default_measure needed
     },
     "82816NED": {
         "label": "Woningvoorraad",
         "description": "Woningvoorraad naar type en eigendom",
         "unit": "woningen",
+        # Dimensions: Perioden + TypeWoning. Pin to total stock.
+        "default_measure": "T001044",
     },
     "85323NED": {
         "label": "Werkloosheid — kerncijfers",
         "description": "Werkloze beroepsbevolking (ILO-definitie)",
         "unit": "x 1 000 personen / %",
+        # Pin to total unemployment rate (%)
+        "default_measure": "T001137",
     },
     "83694NED": {
         "label": "Bbp — kwartaalrekeningen",
@@ -43,12 +56,17 @@ DATASETS: dict[str, dict[str, str]] = {
         "label": "Consumentenprijzen — CPI",
         "description": "Consumentenprijsindex, alle huishoudens (2015=100)",
         "unit": "index",
+        # Dimensions: Perioden + Bestedingscategorie. Pin to all-items index.
+        "default_measure": "M000000",
     },
 }
 
 
 async def list_datasets() -> list[dict]:
-    return [{"code": code, **meta} for code, meta in DATASETS.items()]
+    return [
+        {"code": code, **{k: v for k, v in meta.items() if k != "default_measure"}}
+        for code, meta in DATASETS.items()
+    ]
 
 
 async def fetch_observations(
@@ -56,20 +74,25 @@ async def fetch_observations(
     measure: str | None = None,
     periods: int = 16,
 ) -> dict[str, Any]:
-    cache_key = f"cbs3:{dataset_code}:{measure}:{periods}"
+    dataset_cfg = DATASETS.get(dataset_code, {})
+    dataset_meta = {k: v for k, v in dataset_cfg.items() if k != "default_measure"}
+
+    # Use caller-supplied measure, then dataset default, then None
+    effective_measure = measure or dataset_cfg.get("default_measure")
+
+    cache_key = f"cbs4:{dataset_code}:{effective_measure}:{periods}"
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
 
-    dataset_meta = DATASETS.get(dataset_code, {"label": dataset_code})
     fetch_top = periods * 10
 
     for attempt, orderby in enumerate(["$orderby=Perioden desc", None]):
         qs_parts = [f"$top={fetch_top}"]
         if orderby:
             qs_parts.append(orderby)
-        if measure:
-            safe = measure.replace("'", "''")
+        if effective_measure:
+            safe = effective_measure.replace("'", "''")
             qs_parts.append(f"$filter=Measure eq '{safe}'")
 
         url = f"{_CBS_BASE}/{dataset_code}/Observations?{'&'.join(qs_parts)}"
@@ -112,7 +135,9 @@ async def fetch_observations(
         return result
 
     period_col = _detect_period_col(raw[0])
-    logger.info("CBS %s — period column: %s", dataset_code, period_col)
+    logger.info(
+        "CBS %s — period column: %s, rows: %d", dataset_code, period_col, len(raw)
+    )
 
     by_period: dict[str, float | None] = {}
     for row in raw:
@@ -122,7 +147,7 @@ async def fetch_observations(
 
     sorted_periods = sorted(by_period.keys())[-periods:]
     observations = [
-        {"period": p, "value": by_period[p], "measure": measure or ""}
+        {"period": p, "value": by_period[p], "measure": effective_measure or ""}
         for p in sorted_periods
     ]
 
