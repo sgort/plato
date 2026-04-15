@@ -1,4 +1,4 @@
-name: Deploy API
+name: Build and Deploy API
 
 on:
   push:
@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,18 +17,35 @@ jobs:
         with:
           python-version: "3.12"
 
+      # 1. Install dependencies into a folder
       - name: Install dependencies
-        working-directory: api
-        run: pip install -r requirements.txt
-
-      - name: Zip package
         run: |
           cd api
-          zip -r ../app.zip .
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --target ./package
 
-      - name: Deploy to Azure App Service
+      # 2. Copy app into same folder
+      - name: Prepare deployment package
+        run: |
+          cd api
+          cp -r ./* package/
+
+      # 3. Create ZIP artifact
+      - name: Create ZIP
+        run: |
+          cd api/package
+          zip -r ../../app.zip .
+
+      # 4. Upload artifact (optional but useful)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-build
+          path: app.zip
+
+      # 5. Deploy to Azure (no build on Azure)
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: plato-api
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: app.zip
