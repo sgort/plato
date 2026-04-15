@@ -32,11 +32,13 @@ jobs:
           cd api
           cp -r ./* package/
 
-      # Create ZIP artifact
-      - name: Create ZIP
+      - name: Create ZIP artifact
         run: |
-          cd api/package
-          zip -r ../../app.zip .
+          cd api
+          zip -r ../app.zip . \
+            -x "package/*" \
+            -x "__pycache__/*" \
+            -x "*.pyc"
 
       # Upload artifact for download
       - name: Upload artifact
