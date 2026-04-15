@@ -25,10 +25,10 @@ jobs:
           pip install -r requirements.txt --target ./package
 
       # 2. Copy app into same folder
-      - name: Prepare deployment package
+      - name: Create deployment package
         run: |
           cd api
-          cp -r ./* package/
+          zip -r ../app.zip . -x "package/*"
 
       # 3. Create ZIP artifact
       - name: Create ZIP
