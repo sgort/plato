@@ -11,36 +11,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # 1. Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Setup Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # Install dependencies into a package folder
+      # 3. Install dependencies into package folder
       - name: Install dependencies
         run: |
           cd api
           python -m pip install --upgrade pip
           pip install -r requirements.txt --target ./package
 
-      # Copy app code into package
-      - name: Prepare package
+      # 4. Copy ONLY app files safely (no recursion issues)
+      - name: Copy application code
         run: |
           cd api
-          cp -r ./* package/
+          rsync -av \
+            --exclude 'package' \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            ./ package/
 
-      - name: Create ZIP artifact
+      # 5. Create ZIP artifact (clean deployment package)
+      - name: Create deployment ZIP
         run: |
-          cd api
-          zip -r ../app.zip . \
-            -x "package/*" \
-            -x "__pycache__/*" \
-            -x "*.pyc"
+          cd api/package
+          zip -r ../../app.zip .
 
-      # Upload artifact for download
+      # 6. Upload artifact for download
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
