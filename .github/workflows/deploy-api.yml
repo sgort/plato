@@ -19,9 +19,14 @@ jobs:
         working-directory: api
         run: pip install -r requirements.txt
 
+      - name: Zip package
+        run: |
+          cd api
+          zip -r ../app.zip .
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: plato-api
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: api
+          package: app.zip
