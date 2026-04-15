@@ -11,6 +11,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { SourceToggle } from "@/components/SourceToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { FeedSource, SearchState } from "@/types";
+import { BetaBanner } from "@/components/BetaBanner";
 
 const INITIAL_SEARCH: SearchState = { q: "", types: [], source: "tk" };
 const TYPE_MAP: Record<FeedSource, string[]> = { tk: [], ob: [] };
@@ -57,105 +58,108 @@ export default function App() {
 
   const sourceLabel = search.source === "tk" ? "Tweede Kamer" : "Officiële Bekendmakingen";
 
-  return (
-    <div className="flex min-h-screen">
-      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-      <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-7
-                        border-r border-ink-800 bg-ink-950 px-6 py-8 overflow-y-auto">
-        {/* Wordmark + theme toggle */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold leading-tight text-slate-100">
-              Parlementair
-              <br />
-              <span className="text-amber-500">Dashboard</span>
-            </h1>
-            <p className="mt-1 text-xs text-slate-600">open data · overheid.nl</p>
+return (
+    <div className="flex min-h-screen flex-col">
+      <BetaBanner />
+      <div className="flex flex-1">
+        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+        <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-7
+                          border-r border-ink-800 bg-ink-950 px-6 py-8 overflow-y-auto">
+          {/* Wordmark + theme toggle */}
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-bold leading-tight text-slate-100">
+                Parlementair
+                <br />
+                <span className="text-amber-500">Dashboard</span>
+              </h1>
+              <p className="mt-1 text-xs text-slate-600">open data · overheid.nl</p>
+            </div>
+            <ThemeToggle light={light} onToggle={toggleTheme} />
           </div>
-          <ThemeToggle light={light} onToggle={toggleTheme} />
-        </div>
 
-        <div className="border-t border-ink-800" />
+          <div className="border-t border-ink-800" />
 
-        <SourceToggle value={search.source} onChange={handleSourceChange} />
+          <SourceToggle value={search.source} onChange={handleSourceChange} />
 
-        <div className="border-t border-ink-800" />
+          <div className="border-t border-ink-800" />
 
-        <SavedSearches
-          searches={searches}
-          currentQuery={search}
-          saving={saving}
-          onApply={applySearch}
-          onSave={save}
-          onDelete={remove}
-        />
+          <SavedSearches
+            searches={searches}
+            currentQuery={search}
+            saving={saving}
+            onApply={applySearch}
+            onSave={save}
+            onDelete={remove}
+          />
 
-        <div className="border-t border-ink-800" />
+          <div className="border-t border-ink-800" />
 
-        <CbsWidget />
+          <CbsWidget />
 
-        <div className="border-t border-ink-800" />
+          <div className="border-t border-ink-800" />
 
-        <LegislationLookup />
+          <LegislationLookup />
 
-        <div className="mt-auto pt-4 text-xs text-slate-700 space-y-0.5">
-          <p>TK: gegevensmagazijn.tweedekamer.nl</p>
-          <p>OB: zoekservice.overheid.nl</p>
-          <p>CBS: opendata.cbs.nl</p>
-          <p className="pt-1">EUPL-1.2 · open-regels.nl</p>
-        </div>
-      </aside>
+          <div className="mt-auto pt-4 text-xs text-slate-700 space-y-0.5">
+            <p>TK: gegevensmagazijn.tweedekamer.nl</p>
+            <p>OB: zoekservice.overheid.nl</p>
+            <p>CBS: opendata.cbs.nl</p>
+            <p className="pt-1">EUPL-1.2 · open-regels.nl</p>
+          </div>
+        </aside>
 
-      {/* ── Main ─────────────────────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="sticky top-0 z-10 border-b border-ink-800 bg-ink-900/95
-                           backdrop-blur-sm px-6 py-4">
-          <div className="mx-auto max-w-4xl space-y-3">
-            {/* Mobile header */}
-            <div className="flex items-center justify-between lg:hidden">
-              <span className="font-display text-lg font-bold text-amber-500">Dashboard</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">{sourceLabel}</span>
-                <ThemeToggle light={light} onToggle={toggleTheme} />
+        {/* ── Main ─────────────────────────────────────────────────────────── */}
+        <main className="flex-1 flex flex-col min-w-0">
+          {/* Top bar */}
+          <header className="sticky top-0 z-10 border-b border-ink-800 bg-ink-900/95
+                             backdrop-blur-sm px-6 py-4">
+            <div className="mx-auto max-w-4xl space-y-3">
+              {/* Mobile header */}
+              <div className="flex items-center justify-between lg:hidden">
+                <span className="font-display text-lg font-bold text-amber-500">Dashboard</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">{sourceLabel}</span>
+                  <ThemeToggle light={light} onToggle={toggleTheme} />
+                </div>
+              </div>
+
+              <SearchBar
+                value={search.q}
+                onChange={(q) => setSearch((prev) => ({ ...prev, q }))}
+              />
+
+              <div className="flex items-center gap-3">
+                <span className="hidden lg:inline-flex badge bg-ink-800 border border-ink-600 text-slate-400 shrink-0">
+                  {sourceLabel}
+                </span>
+                {availableTypes.length > 0 && (
+                  <FilterChips
+                    available={availableTypes}
+                    selected={search.types}
+                    onChange={(types) => setSearch((prev) => ({ ...prev, types }))}
+                  />
+                )}
               </div>
             </div>
+          </header>
 
-            <SearchBar
-              value={search.q}
-              onChange={(q) => setSearch((prev) => ({ ...prev, q }))}
-            />
-
-            <div className="flex items-center gap-3">
-              <span className="hidden lg:inline-flex badge bg-ink-800 border border-ink-600 text-slate-400 shrink-0">
-                {sourceLabel}
-              </span>
-              {availableTypes.length > 0 && (
-                <FilterChips
-                  available={availableTypes}
-                  selected={search.types}
-                  onChange={(types) => setSearch((prev) => ({ ...prev, types }))}
-                />
-              )}
+          {/* Feed */}
+          <div className="flex-1 px-6 py-6">
+            <div className="mx-auto max-w-4xl">
+              <FeedList
+                items={items}
+                total={total}
+                loading={loading}
+                loadingMore={loadingMore}
+                error={error}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+              />
             </div>
           </div>
-        </header>
-
-        {/* Feed */}
-        <div className="flex-1 px-6 py-6">
-          <div className="mx-auto max-w-4xl">
-            <FeedList
-              items={items}
-              total={total}
-              loading={loading}
-              loadingMore={loadingMore}
-              error={error}
-              hasMore={hasMore}
-              onLoadMore={loadMore}
-            />
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
