@@ -1,3 +1,4 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 
@@ -37,9 +38,14 @@ async def no_cache_api(request: Request, call_next):
     return response
 
 
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:80"],
+    allow_origins=[
+        "http://localhost:5173",
+        FRONTEND_ORIGIN,
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
