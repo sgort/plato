@@ -4,24 +4,13 @@ on:
   push:
     branches: [main]
     paths: [frontend/**]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-        env:
-          VITE_API_BASE: https://plato-api.azurewebsites.net
 
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
@@ -31,4 +20,3 @@ jobs:
           action: upload
           app_location: frontend
           output_location: dist
-          skip_app_build: true
