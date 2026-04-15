@@ -16,6 +16,7 @@ venv/
 
 # Environment
 .env
+frontend/.env.local
 
 # Node
 node_modules/

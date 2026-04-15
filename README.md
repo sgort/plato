@@ -46,9 +46,9 @@ PlatO/
 
 ```bash
 cd api
-pip install -r requirements.txt
+pip install -r requirements.txt (on Windows: pip install -r requirements-dev.txt)
 cp ../.env.example ../.env
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 
 The API starts at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.

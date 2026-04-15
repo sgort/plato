@@ -7,7 +7,9 @@ import type {
   SearchState,
 } from "@/types";
 
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_BASE
+  ? `${import.meta.env.VITE_API_BASE}/api`
+  : "/api";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
