@@ -1,4 +1,4 @@
-name: Build and Deploy API
+name: Build API Artifact
 
 on:
   push:
@@ -11,41 +11,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # 1. Install dependencies into a folder
+      # Install dependencies into a package folder
       - name: Install dependencies
         run: |
           cd api
           python -m pip install --upgrade pip
           pip install -r requirements.txt --target ./package
 
-      # 2. Copy app into same folder
-      - name: Create deployment package
+      # Copy app code into package
+      - name: Prepare package
         run: |
           cd api
-          zip -r ../app.zip . -x "package/*"
+          cp -r ./* package/
 
-      # 3. Create ZIP artifact
+      # Create ZIP artifact
       - name: Create ZIP
         run: |
           cd api/package
           zip -r ../../app.zip .
 
-      # 4. Upload artifact (optional but useful)
+      # Upload artifact for download
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: api-build
+          name: plato-api-build
           path: app.zip
-
-      # 5. Deploy to Azure (no build on Azure)
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: plato-api
-          package: app.zip
